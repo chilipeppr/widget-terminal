@@ -455,6 +455,29 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             .attr({type : 'text/css', rel : 'stylesheet'})
             .attr('href', '//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css');  
         },
+        resize: function() {
+            // add the top of the widget + height of widget
+            // to get sizing. then subtract that from height of window to figure out what height to add (subtract) from log
+            var wdgt = $('#' + this.id);
+            var wht = wdgt.offset().top + wdgt.height();
+            var delta = $( window ).height() - wht;
+            //console.log("delta:", delta, "wht:", wht);
+            var loght = $('#' + this.id + ' .console-log').height();
+            $('#' + this.id + ' .console-log').height(loght + delta - 13);
+        },
+        resizerSetup: function() {
+            // due to the layout complexity here of being
+            // nested very deep, doing absolute positioning
+            // for pure CSS resize is not working, so use
+            // jquery resize
+            var that = this;
+            $( window ).resize(function() {
+                //console.log("New height of window after resize: ", $( window ).height() );
+                //console.log("New pos of .com-chilipeppr-widget-spconsole:", $('.com-chilipeppr-widget-spconsole').offset(), "height:",  $('.com-chilipeppr-widget-spconsole').height());
+                //console.log("New height of .com-chilipeppr-widget-spconsole-console-log:", $('.com-chilipeppr-widget-spconsole-console-log').height() );
+                that.resize();
+            });
+        },
         isVersionWarningInitted: false,
         versionWarning: function() {
             // if we were specifically given a version, just treat that
