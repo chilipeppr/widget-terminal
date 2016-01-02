@@ -34,7 +34,7 @@ chilipeppr.load(
   function() {
     // Callback after widget loaded into #myDivWidgetInsertedInto
     cprequire(
-      ["inline:com-chilipeppr-widget-template"], // the id you gave your widget
+      ["inline:com-chilipeppr-widget-terminal"], // the id you gave your widget
       function(mywidget) {
         // Callback that is passed reference to your newly loaded widget
         console.log("My widget just got loaded.", mywidget);
@@ -94,7 +94,7 @@ To better understand how ChiliPeppr's subscribe() method works see amplify.js's 
           </tr>
       </thead>
       <tbody>
-      <tr><td colspan="2">(No signals defined in this widget/element)</td></tr>    
+      <tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/ws/send</td><td>We send at a low-level on the socket the exec and execruntime command as a fundamental for this widget to work.</td></tr><tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/requestVersion</td><td>We need to ask the Serial Port JSON Server widget to send us back the version, we receive it back on the /recvVersion signal.</td></tr>    
       </tbody>
   </table>
 
@@ -111,7 +111,7 @@ To better understand how ChiliPeppr's publish() method works see amplify.js's do
           </tr>
       </thead>
       <tbody>
-      <tr><td colspan="2">(No signals defined in this widget/element)</td></tr>    
+      <tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/recvVersion</td><td>When we ask the Serial Port JSON Server widget to send us back the version from the /requestVersion signal, we receive it back on this signal.</td></tr>    
       </tbody>
   </table>
 
@@ -133,10 +133,10 @@ other widgets know how to subscribe to them and what they do.</td></tr><tr valig
 other widgets know how to subscribe to them and what they do.</td></tr><tr valign="top"><td>foreignPublish</td><td>object</td><td>Please see docs above.<br><br>Document the foreign publish signals, i.e. signals owned by other widgets
 or elements, that this widget/element publishes to.</td></tr><tr valign="top"><td>foreignSubscribe</td><td>object</td><td>Please see docs above.<br><br>Document the foreign subscribe signals, i.e. signals owned by other widgets
 or elements, that this widget/element subscribes to.</td></tr><tr valign="top"><td>init</td><td>function</td><td>function () <br><br>All widgets should have an init method. It should be run by the
-instantiating code like a workspace or a different widget.</td></tr><tr valign="top"><td>btnSetup</td><td>function</td><td>function () <br><br>Call this method from init to setup all the buttons when this widget
+instantiating code like a workspace or a different widget.</td></tr><tr valign="top"><td>send</td><td>function</td><td>function () </td></tr><tr valign="top"><td>consoleSubscribeToLowLevelSerial</td><td>function</td><td>function () </td></tr><tr valign="top"><td>onWsRecv</td><td>function</td><td>function (msg) </td></tr><tr valign="top"><td>setupClearBtn</td><td>function</td><td>function () </td></tr><tr valign="top"><td>onClear</td><td>function</td><td>function (evt) </td></tr><tr valign="top"><td>onRecvLine</td><td>function</td><td>function (data) </td></tr><tr valign="top"><td>onEchoOfSend</td><td>function</td><td>function (data) </td></tr><tr valign="top"><td>appendLogEchoCmd</td><td>function</td><td>function (msg) </td></tr><tr valign="top"><td>logSetup</td><td>function</td><td>function () </td></tr><tr valign="top"><td>logEls</td><td>object</td><td></td></tr><tr valign="top"><td>appendLog</td><td>function</td><td>function (msg) </td></tr><tr valign="top"><td>history</td><td>object</td><td></td></tr><tr valign="top"><td>historyLastShownIndex</td><td>object</td><td></td></tr><tr valign="top"><td>pushOntoHistory</td><td>function</td><td>function (cmd) </td></tr><tr valign="top"><td>onHistoryMenuClick</td><td>function</td><td>function (evt) </td></tr><tr valign="top"><td>globalCmdCtr</td><td>number</td><td></td></tr><tr valign="top"><td>consoleSetup</td><td>function</td><td>function () </td></tr><tr valign="top"><td>setupResizeable</td><td>function</td><td>function () </td></tr><tr valign="top"><td>loadJqueryUi</td><td>function</td><td>function () </td></tr><tr valign="top"><td>isVersionWarningInitted</td><td>boolean</td><td></td></tr><tr valign="top"><td>versionWarning</td><td>function</td><td>function () </td></tr><tr valign="top"><td>versionWarningCallback</td><td>function</td><td>function (spjsVersion) </td></tr><tr valign="top"><td>btnSetup</td><td>function</td><td>function () <br><br>Call this method from init to setup all the buttons when this widget
 is first loaded. This basically attaches click events to your 
 buttons. It also turns on all the bootstrap popovers by scanning
-the entire DOM of the widget.</td></tr><tr valign="top"><td>onHelloBtnClick</td><td>function</td><td>function (evt) <br><br>onHelloBtnClick is an example of a button click event callback</td></tr><tr valign="top"><td>options</td><td>object</td><td>User options are available in this property for reference by your
+the entire DOM of the widget.</td></tr><tr valign="top"><td>options</td><td>object</td><td>User options are available in this property for reference by your
 methods. If any change is made on these options, please call
 saveOptionsLocalStorage()</td></tr><tr valign="top"><td>setupUiFromLocalStorage</td><td>function</td><td>function () <br><br>Call this method on init to setup the UI by reading the user's
 stored settings from localStorage and then adjust the UI to reflect

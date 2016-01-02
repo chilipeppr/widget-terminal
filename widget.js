@@ -26,15 +26,21 @@ requirejs.config({
     paths: {
         // Example of how to define the key (you make up the key) and the URL
         // Make sure you DO NOT put the .js at the end of the URL
-        // SmoothieCharts: '//smoothiecharts.org/smoothie',
+        jqueryui: '//chilipeppr.com/js/jquery-ui-1.10.4/ui/jquery.ui.core',
+        jqueryuiWidget: '//chilipeppr.com/js/jquery-ui-1.10.4/ui/jquery.ui.widget',
+        jqueryuiMouse: '//chilipeppr.com/js/jquery-ui-1.10.4/ui/jquery.ui.mouse',
+        jqueryuiResizeable: '//chilipeppr.com/js/jquery-ui-1.10.4/ui/jquery.ui.resizable',
     },
     shim: {
         // See require.js docs for how to define dependencies that
         // should be loaded before your script/widget.
+        jqueryuiWidget: ['jqueryui'],
+        jqueryuiMouse: ['jqueryuiWidget'],
+        jqueryuiResizeable: ['jqueryuiMouse' ]
     }
 });
 
-cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
+cprequire_test(["inline:com-chilipeppr-widget-terminal"], function(myWidget) {
 
     // Test this element. This code is auto-removed by the chilipeppr.load()
     // when using this widget in production. So use the cpquire_test to do things
@@ -77,18 +83,23 @@ cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
             cprequire(["inline:com-chilipeppr-widget-serialport"], function(spjs) {
                 //console.log("inside require of " + fm.id);
                 spjs.init();
+                spjs.consoleToggle();
+                
+                // init my widget
+                myWidget.init();
+
             });
         }
     );
     
-    // init my widget
-    myWidget.init();
-    $('#com-chilipeppr-widget-template').css('padding', '10px;');
+    $('#' + myWidget.id).css('margin', '10px');
+    $('title').html(myWidget.name);
 
+    
 } /*end_test*/ );
 
 // This is the main definition of your widget. Give it a unique name.
-cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other dependencies here */ ], function() {
+cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryuiResizeable"], function() {
     return {
         /**
          * The ID of the widget. You must define this and make it unique.
@@ -128,7 +139,9 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
         foreignPublish: {
             // Define a key:value pair here as strings to document what signals you publish to
             // that are owned by foreign/other widgets.
-            // '/jsonSend': 'Example: We send Gcode to the serial port widget to do stuff with the CNC controller.'
+            
+            "/com-chilipeppr-widget-serialport/ws/send" : "We send at a low-level on the socket the exec and execruntime command as a fundamental for this widget to work.",
+            "/com-chilipeppr-widget-serialport/requestVersion" : 'We need to ask the Serial Port JSON Server widget to send us back the version, we receive it back on the /recvVersion signal.'
         },
         /**
          * Document the foreign subscribe signals, i.e. signals owned by other widgets
@@ -137,6 +150,7 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
         foreignSubscribe: {
             // Define a key:value pair here as strings to document what signals you subscribe to
             // that are owned by foreign/other widgets.
+            "/com-chilipeppr-widget-serialport/recvVersion" : 'When we ask the Serial Port JSON Server widget to send us back the version from the /requestVersion signal, we receive it back on this signal.'
             // '/com-chilipeppr-elem-dragdrop/ondropped': 'Example: We subscribe to this signal at a higher priority to intercept the signal. We do not let it propagate by returning false.'
         },
         /**
@@ -146,12 +160,282 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
         init: function() {
             console.log("I am being initted. Thanks.");
 
+            this.versionWarning();
+            
+            this.logSetup();
+            this.consoleSetup();
+            this.setupResizeable();
+
             this.setupUiFromLocalStorage();
             this.btnSetup();
             this.forkSetup();
 
             console.log("I am done being initted.");
         },
+        send: function() {
+          chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "exec ls");  
+        },
+        consoleSubscribeToLowLevelSerial: function() {
+            // subscribe to websocket events
+            chilipeppr.subscribe("/com-chilipeppr-widget-serialport/ws/recv", this, this.onWsRecv);
+        },
+        onWsRecv: function(msg) {
+            if (msg.match(/^\{/)) {
+                // it's json
+                var data = $.parseJSON(msg);
+                console.log("got json for onWsRecv. data:", data);
+                
+                if ('ExecStatus' in data) {
+                    this.appendLog(data.Output + "\n");                    
+                }
+            }
+        },
+        setupClearBtn: function() {
+            $('#' + this.id + ' .spconsole-clear').click(this.onClear.bind(this));
+            //this.appendLog("asdfasdf");
+        },
+        onClear: function(evt) {
+            console.log("onClear. evt:", evt);
+            var log = this.logEls.log;
+            log.html("");
+        },
+        onRecvLine: function(data) {
+            if (data.dataline) {
+                this.appendLog(data.dataline);
+            }
+        },
+        onEchoOfSend: function(data) {
+            this.appendLogEchoCmd(data);
+        },
+        
+        appendLogEchoCmd: function(msg) {
+            //console.log("appendLogEchoCmd. msg:", msg);
+            var msg2 = $("<div class=\"out\"/>").text("" + msg);
+            //console.log(msg2);
+            this.appendLog(msg2);
+        },
+        logSetup: function() {
+            if (this.logEls.log == null) {
+                console.log("lazy loading logEls. logEls:", this.logEls);
+                this.logEls.log = $('#' + this.id + ' .console-log pre');
+                this.logEls.logOuter = $('#' + this.id + ' .console-log');
+            }
+        },
+        logEls: {
+            log: null,
+            logOuter: null,
+        },
+        appendLog: function (msg) {
+            //console.log("appendLog. msg:", msg);
+            
+            if (this.isFilterActive) {
+                // see if log matches filter and ignore
+                if ( !(msg.appendTo) && msg.match(this.filterRegExp)) {
+                    return;
+                }
+            }
+            
+            
+            //console.log("logEls:", this.logEls);
+            //console.log(this.logEls.logOuter);
+            var d = this.logEls.logOuter[0];
+            var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
+            var log = this.logEls.log;
+            if (log.html().length > 25000) {
+                // truncating log
+                console.log("Truncating log.");
+                /*
+                var logHtml = log.html().split(/\n/);
+                var sliceStart = logHtml.length - 200;
+                if (sliceStart < 0) sliceStart = 0;
+                log.html(logHtml.slice(sliceStart).join("\n"));
+                */
+                var loghtml = log.html();
+                log.html("--truncated--" + loghtml.substring(loghtml.length - 2500));
+            }
+            if (msg.appendTo)
+                msg.appendTo(log);
+            else
+                log.html(log.html() + msg );
+            
+            //if (doScroll) {
+                d.scrollTop = d.scrollHeight - d.clientHeight;
+            //}
+        },
+        
+        history: [], // store history of commands so user can iterate back
+        historyLastShownIndex: null,    // store last shown index so iterate from call to call
+        pushOntoHistory: function(cmd) {
+            this.history.push(cmd);
+            
+            // push onto dropup menu
+            var el = $('<li><a href="javascript:">' + cmd + '</a></li>');
+            $('#' + this.id + ' .console-form .dropdown-menu').append(el);
+            el.click(cmd, this.onHistoryMenuClick.bind(this));
+        },
+        onHistoryMenuClick: function(evt) {
+            console.log("got onHistoryMenuClick. data:", evt.data);
+            $("#" + this.id + " .console-form input").val(evt.data);
+            //return true;
+        },
+        globalCmdCtr: 0, // keep a running ctr for getting a unique id for console serial cmds
+        consoleSetup: function () {
+            var that = this;
+            
+            that.consoleSubscribeToLowLevelSerial();
+
+            $("#" + this.id + " .console-form").submit(function (evt) {
+                //console.log("got submit on form");
+                console.group("submit on form in serial port console");
+                evt.preventDefault();
+                
+                var msg = $('#' + that.id + ' .console-form input');
+                console.log("msg:", msg.val());
+                //if (!msg.val()) {
+                //    return false;
+                //}
+                
+                // push onto history stack
+                if (msg.val().length > 0) {
+                    //console.log("pushing msg to history. msg:", msg.val());
+                    that.pushOntoHistory(msg.val());
+                    
+                }
+                
+                //var newline = "\n";
+                
+                // publish the cmd to the serial port json server
+                var cmd = "exec " + msg.val(); // + newline;
+                console.log("Sending cmd: ", cmd);
+                chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", cmd);
+                
+                
+                // reset input box to empty
+                msg.val("");
+                // reset history on submit
+                that.historyLastShownIndex = null;
+                console.groupEnd();
+                return false;
+            });
+            
+            // show history by letting user do up/down arrows
+            $("#" + this.id + " .console-form").keydown(function(evt) {
+                //console.log("got keydown. evt.which:", evt.which, "evt:", evt);
+                if (evt.which == 38) {
+                    // up arrow
+                    if (that.historyLastShownIndex == null)
+                        that.historyLastShownIndex = that.history.length;
+                    that.historyLastShownIndex--;
+                    if (that.historyLastShownIndex < 0) {
+                        console.log("out of history to show. up arrow.");
+                        that.historyLastShownIndex = 0;
+                        return;
+                    }
+                    $("#" + this.id + " .console-form input").val(that.history[that.historyLastShownIndex]);
+                } else if (evt.which == 40) {
+                    if (that.historyLastShownIndex == null)
+                        return;
+                        //that.historyLastShownIndex = -1;
+                    that.historyLastShownIndex++;
+                    if (that.historyLastShownIndex >= that.history.length) {
+                        console.log("out of history to show. down arrow.");
+                        that.historyLastShownIndex = that.history.length;
+                        $("#" + this.id + " .console-form input").val("");
+                        return;
+                    }
+                    $("#" + that.id + " .console-form input").val(that.history[that.historyLastShownIndex]);
+                }
+            });
+
+        },
+        setupResizeable: function() {
+            
+            this.loadJqueryUi();
+            var that = this;
+            
+            //$( "#com-chilipeppr-widget-gcode-body" ).resizable({
+            $( "#" + this.id ).resizable({
+                //alsoResize: "#com-chilipeppr-widget-gcode-body-2col > td:first"
+                alsoResize: "#" + this.id + " .console-log",
+                //ndex:1
+                //handles: "s",
+                
+                //maxHeight:1000,
+                resize: function(evt) {
+                    console.log("resize resize", evt);
+                    //$( ".com-chilipeppr-widget-spconsole" ).removeAttr("style");
+                    $( "#" + that.id ).css('height', 'initial');
+                    $( "#" + that.id + " .console-log" ).css('width', 'initial');
+                },
+                start: function(evt) {
+                    console.log("resize start", evt);
+                },
+                stop: function(evt) {
+                    console.log("resize stop", evt);
+                    //$( ".com-chilipeppr-widget-spconsole" ).removeAttr("style");
+                    $( "#" + that.id ).css('height', 'initial');
+                    $( "#" + that.id + " .console-log" ).css('width', 'initial');
+                }
+            });
+        },
+        loadJqueryUi: function() {
+            // load jquery-ui css, but make sure nobody else loaded it
+            if (!$("link[href='//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css']").length)
+            $('<link>')
+            .appendTo('head')
+            .attr({type : 'text/css', rel : 'stylesheet'})
+            .attr('href', '//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css');  
+        },
+        isVersionWarningInitted: false,
+        versionWarning: function() {
+            // if we were specifically given a version, just treat that
+            // like normal and don't trigger a callback
+            
+            var options = this.options;
+            
+            // see if we should hide the version warning
+            if (options && 'spjsVersion' in options) {
+                
+                // we were staitically given a version warning, so use that
+                console.log("spjsVersion. we were statically given version so will not trigger callback technique. spjsVersion:", options.spjsVersion);
+                
+                if (options.spjsVersion >= 1.83) {
+                    $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').addClass("hidden");
+                } else {
+                    $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').removeClass("hidden");
+                }
+                
+            } else {
+                
+                console.log("spjsVersion. we were not given a spjsVersion so we are asking the serial port widget to tell us");
+                
+                // we need to ask spjs to get a version back
+                if (this.isVersionWarningInitted == false) {
+                    chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvVersion", this, this.versionWarningCallback);
+                }
+                
+                // wait about 2 seconds just to wait a bit for connecting
+                setTimeout(function() {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/requestVersion");
+                }, 2000);
+                
+            }
+                    
+
+        },
+        versionWarningCallback: function(spjsVersion) {
+            console.log("spjsVersion. got versionWarningCallback. spjsVersion:", spjsVersion);
+            // we were staitically given a version warning, so use that
+            if (spjsVersion >= 1.87) {
+                console.log("spjsVersion was >= 1.87. cool");
+                $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').addClass("hidden");
+            } else {
+                console.log("spjsVersion was NOT >= 1.87. cool");
+                $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').removeClass("hidden");
+                $('#com-chilipeppr-widget-terminal .yourspjsversion').text(spjsVersion);
+            }
+        },
+
         /**
          * Call this method from init to setup all the buttons when this widget
          * is first loaded. This basically attaches click events to your 
@@ -184,41 +468,7 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
                 container: 'body'
             });
 
-            // Init Say Hello Button on Main Toolbar
-            // We are inlining an anonymous method as the callback here
-            // as opposed to a full callback method in the Hello Word 2
-            // example further below. Notice we have to use "that" so 
-            // that the this is set correctly inside the anonymous method
-            $('#' + this.id + ' .btn-sayhello').click(function() {
-                console.log("saying hello");
-                // Make sure popover is immediately hidden
-                $('#' + that.id + ' .btn-sayhello').popover("hide");
-                // Show a flash msg
-                chilipeppr.publish(
-                    "/com-chilipeppr-elem-flashmsg/flashmsg",
-                    "Hello Title",
-                    "Hello World from widget " + that.id,
-                    1000
-                );
-            });
-
-            // Init Hello World 2 button on Tab 1. Notice the use
-            // of the slick .bind(this) technique to correctly set "this"
-            // when the callback is called
-            $('#' + this.id + ' .btn-helloworld2').click(this.onHelloBtnClick.bind(this));
-
-        },
-        /**
-         * onHelloBtnClick is an example of a button click event callback
-         */
-        onHelloBtnClick: function(evt) {
-            console.log("saying hello 2 from btn in tab 1");
-            chilipeppr.publish(
-                '/com-chilipeppr-elem-flashmsg/flashmsg',
-                "Hello 2 Title",
-                "Hello World 2 from Tab 1 from widget " + this.id,
-                2000 /* show for 2 second */
-            );
+            this.setupClearBtn();
         },
         /**
          * User options are available in this property for reference by your
