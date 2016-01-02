@@ -191,7 +191,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             }
         },
         setupClearBtn: function() {
-            $('#' + this.id + ' .spconsole-clear').click(this.onClear.bind(this));
+            $('#' + this.id + ' .btn-clear').click(this.onClear.bind(this));
             //this.appendLog("asdfasdf");
         },
         onClear: function(evt) {
@@ -278,7 +278,6 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             $("#" + this.id + " .console-form input").val(evt.data);
             //return true;
         },
-        globalCmdCtr: 0, // keep a running ctr for getting a unique id for console serial cmds
         consoleSetup: function () {
             var that = this;
             
@@ -301,6 +300,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                     that.pushOntoHistory(msg.val());
                     
                 }
+                that.appendLogEchoCmd(msg.val());
                 
                 //var newline = "\n";
                 
@@ -331,7 +331,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                         that.historyLastShownIndex = 0;
                         return;
                     }
-                    $("#" + this.id + " .console-form input").val(that.history[that.historyLastShownIndex]);
+                    $("#" + that.id + " .console-form input").val(that.history[that.historyLastShownIndex]);
                 } else if (evt.which == 40) {
                     if (that.historyLastShownIndex == null)
                         return;
@@ -340,7 +340,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                     if (that.historyLastShownIndex >= that.history.length) {
                         console.log("out of history to show. down arrow.");
                         that.historyLastShownIndex = that.history.length;
-                        $("#" + this.id + " .console-form input").val("");
+                        $("#" + that.id + " .console-form input").val("");
                         return;
                     }
                     $("#" + that.id + " .console-form input").val(that.history[that.historyLastShownIndex]);
