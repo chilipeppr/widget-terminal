@@ -65,7 +65,22 @@ cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
             });
         }
     );
-
+    
+    // load spjs widget so we can test
+    //http://fiddle.jshell.net/chilipeppr/vetj5fvx/show/light/
+    $('body').append('<div id="testDivForSpjsWidget"></div>');
+    chilipeppr.load(
+        "#testDivForSpjsWidget",
+        "http://fiddle.jshell.net/chilipeppr/vetj5fvx/show/light/",
+        function() {
+            console.log("mycallback got called after loading spjs module");
+            cprequire(["inline:com-chilipeppr-widget-serialport"], function(spjs) {
+                //console.log("inside require of " + fm.id);
+                spjs.init();
+            });
+        }
+    );
+    
     // init my widget
     myWidget.init();
     $('#com-chilipeppr-widget-template').css('padding', '10px;');
@@ -78,9 +93,9 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
         /**
          * The ID of the widget. You must define this and make it unique.
          */
-        id: "com-chilipeppr-widget-template", // Make the id the same as the cpdefine id
-        name: "Widget / Template", // The descriptive name of your widget.
-        desc: "This example widget gives you a framework for creating your own widget. Please change this description once you fork this template and create your own widget. Make sure to run runme.js every time you are done editing your code so you can regenerate your README.md file, regenerate your auto-generated-widget.html, and automatically push your changes to Github.", // A description of what your widget does
+        id: "com-chilipeppr-widget-terminal", // Make the id the same as the cpdefine id
+        name: "Widget / Terminal", // The descriptive name of your widget.
+        desc: "A terminal session with the host running SPJS. As of version 1.87 of SPJS you can send/receive basic terminal commands to host operating system. This widget is a front-end UI for the terminal from ChiliPeppr.",
         url: "(auto fill by runme.js)",       // The final URL of the working widget as a single HTML file with CSS and Javascript inlined. You can let runme.js auto fill this if you are using Cloud9.
         fiddleurl: "(auto fill by runme.js)", // The edit URL. This can be auto-filled by runme.js in Cloud9 if you'd like, or just define it on your own to help people know where they can edit/fork your widget
         githuburl: "(auto fill by runme.js)", // The backing github repo
@@ -96,7 +111,6 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
          */
         publish: {
             // Define a key:value pair here as strings to document what signals you publish.
-            '/onExampleGenerate': 'Example: Publish this signal when we go to generate gcode.'
         },
         /**
          * Define the subscribe signals that this widget/element owns or defines so that
