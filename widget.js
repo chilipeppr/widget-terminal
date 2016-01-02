@@ -172,8 +172,20 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
 
             console.log("I am done being initted.");
         },
+        activate: function() {
+            this.versionWarning();
+        },
+        deactivate: function() {
+            
+        },
+        onExecRuntimeStatus: function(json) {
+            console.log("got onExecRuntimeStatus. json:", json);
+        },
+        sendExecRuntime: function() {
+            chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "execruntime");  
+        },
         send: function() {
-          chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "exec ls");  
+            chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "exec ls");  
         },
         consoleSubscribeToLowLevelSerial: function() {
             // subscribe to websocket events
@@ -187,6 +199,8 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 
                 if ('ExecStatus' in data) {
                     this.appendLog(data.Output + "\n");                    
+                } else if ('ExecRuntimeStatus' in data) {
+                    this.onExecRuntimeStatus(data);
                 }
             }
         },
@@ -410,6 +424,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             });
         },
         isVersionWarningInitted: false,
+        ptrTimeout: null, // holds the pointer to the setTimeout fallback
         versionWarning: function() {
             // if we were specifically given a version, just treat that
             // like normal and don't trigger a callback
@@ -419,7 +434,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             // see if we should hide the version warning
             if (options && 'spjsVersion' in options) {
                 
-                // we were staitically given a version warning, so use that
+                // we were statically given a version warning, so use that
                 console.log("spjsVersion. we were statically given version so will not trigger callback technique. spjsVersion:", options.spjsVersion);
                 
                 if (options.spjsVersion >= 1.83) {
@@ -442,21 +457,37 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                     chilipeppr.publish("/com-chilipeppr-widget-serialport/requestVersion");
                 }, 2000);
                 
+                // now do a callback in 5 seconds if we get nothing back from /requestVersion because
+                // that means we're not connected to any server
+                setTimeout(this.onTimeoutFromVersionRequest.bind(this), 5000);
+                
+                this.appendLog("Checking SPJS status...\n");
+                
+                
             }
                     
 
         },
         versionWarningCallback: function(spjsVersion) {
             console.log("spjsVersion. got versionWarningCallback. spjsVersion:", spjsVersion);
+            
+            // immediately cancel the fallback timeout
+            if (this.ptrTimeout) clearTimeout(this.ptrTimeout);
+            $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').addClass("hidden");
+            
             // we were staitically given a version warning, so use that
             if (spjsVersion >= 1.87) {
                 console.log("spjsVersion was >= 1.87. cool");
-                $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').addClass("hidden");
+                $('#com-chilipeppr-widget-terminal .panel-body .alert-badversion').addClass("hidden");
             } else {
                 console.log("spjsVersion was NOT >= 1.87. cool");
-                $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').removeClass("hidden");
+                $('#com-chilipeppr-widget-terminal .panel-body .alert-badversion').removeClass("hidden");
                 $('#com-chilipeppr-widget-terminal .yourspjsversion').text(spjsVersion);
             }
+        },
+        onTimeoutFromVersionRequest: function() {
+            console.log("got fallback timeout, which means the spjs is not connected");
+            $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').removeClass("hidden");
         },
 
         /**
