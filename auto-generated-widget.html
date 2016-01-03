@@ -229,10 +229,13 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
         init: function() {
             console.log("I am being initted. Thanks.");
 
-            this.versionWarning();
             
             this.logSetup();
             this.consoleSetup();
+            
+            this.versionWarning();
+            this.requestSpjsStatus();
+            
             this.setupResizeable();
 
             this.setupUiFromLocalStorage();
@@ -247,14 +250,54 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
         deactivate: function() {
             
         },
+        isInRaspiCheckMode: false,
+        raspiCapture: "",
+        checkIfRaspberryPi: function() {
+            this.isInRaspiCheckMode = true;
+            // we potentially have a raspi candidate. send actual cmd line and parse that
+            this.send("cat /etc/os-release");
+            this.send('echo "done-with-cat-etc-release"');
+            
+        },
+        checkIfRaspberryPiCallback: function(payload) {
+            // analyze what's coming back
+            if (payload.Output.match(/done-with-cat-etc-release/)) {
+                // we are done capturing
+                this.isInRaspiCheckMode = false;
+                console.log("done capturing");
+                //this.appendLog('We captured\n<span style="color:red">' + this.raspiCapture + '</span>');
+                
+                if (this.raspiCapture.match(/raspbian/i)) {
+                    // looks like we're on a raspi
+                    this.appendLog("You are running SPJS on a Raspberry Pi.\n");
+                }
+                
+                this.raspiCapture = "";
+            } else {
+                this.raspiCapture += payload.Output;
+                
+            }
+        },
+        execruntime: null,
         onExecRuntimeStatus: function(json) {
             console.log("got onExecRuntimeStatus. json:", json);
+            this.appendLog(JSON.stringify(json) + "\n");
+            
+            if (json.OS.match(/linux/i) && json.Arch.match(/arm/i)) {
+                this.execruntime = json;
+                this.checkIfRaspberryPi();
+                setTimeout(this.askForPwd.bind(this), 1000);
+            }
         },
         sendExecRuntime: function() {
             chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "execruntime");  
         },
-        send: function() {
-            chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "exec ls");  
+        send: function(cmd) {
+            chilipeppr.publish("/com-chilipeppr-widget-serialport/ws/send", "exec " + cmd);  
+        },
+        askForPwd: function() {
+            this.send("pwd");
+            //this.send("echo $USER@$HOSTNAME $PWD");
         },
         consoleSubscribeToLowLevelSerial: function() {
             // subscribe to websocket events
@@ -267,7 +310,10 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 console.log("got json for onWsRecv. data:", data);
                 
                 if ('ExecStatus' in data) {
-                    this.appendLog(data.Output + "\n");                    
+                    this.appendLog(data.Output + "\n");      
+                    if (this.isInRaspiCheckMode) {
+                        this.checkIfRaspberryPiCallback(data);
+                    }
                 } else if ('ExecRuntimeStatus' in data) {
                     this.onExecRuntimeStatus(data);
                 }
@@ -524,13 +570,13 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 // wait about 2 seconds just to wait a bit for connecting
                 setTimeout(function() {
                     chilipeppr.publish("/com-chilipeppr-widget-serialport/requestVersion");
-                }, 2000);
+                }, 3000);
                 
                 // now do a callback in 5 seconds if we get nothing back from /requestVersion because
                 // that means we're not connected to any server
-                setTimeout(this.onTimeoutFromVersionRequest.bind(this), 5000);
+                //setTimeout(this.onTimeoutFromVersionRequest.bind(this), 5000);
                 
-                this.appendLog("Checking SPJS status...\n");
+                
                 
                 
             }
@@ -541,11 +587,15 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             console.log("spjsVersion. got versionWarningCallback. spjsVersion:", spjsVersion);
             
             // immediately cancel the fallback timeout
-            if (this.ptrTimeout) clearTimeout(this.ptrTimeout);
-            $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').addClass("hidden");
+            //if (this.ptrTimeout) clearTimeout(this.ptrTimeout);
+            
             
             // we were staitically given a version warning, so use that
-            if (spjsVersion >= 1.87) {
+            if (spjsVersion == 0) {
+                // we got bunk data back, this likely means its not connected yet
+                console.log("got (spjsVersion == 0. bunk");
+                // do nothing
+            } else if (spjsVersion >= 1.87) {
                 console.log("spjsVersion was >= 1.87. cool");
                 $('#com-chilipeppr-widget-terminal .panel-body .alert-badversion').addClass("hidden");
             } else {
@@ -557,6 +607,32 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
         onTimeoutFromVersionRequest: function() {
             console.log("got fallback timeout, which means the spjs is not connected");
             $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').removeClass("hidden");
+        },
+        isSpjsStatusWarningInitted: false,
+        requestSpjsStatus: function() {
+            // we need to ask spjs to get a version back
+            if (this.isSpjsStatusWarningInitted == false) {
+                chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvStatus", this, this.onRequestSpjsStatusCallback);
+            }
+            
+            // wait about 2 seconds just to wait a bit for connecting
+            setTimeout(function() {
+                chilipeppr.publish("/com-chilipeppr-widget-serialport/requestStatus");
+            }, 2000);
+            
+            //this.appendLog("Checking SPJS status...\n");
+        },
+        onRequestSpjsStatusCallback: function(payload) {
+            if (payload.connected) {
+                $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').addClass("hidden");
+                this.appendLog("Connected.\n");
+                
+                // now ask for our execRuntime
+                this.sendExecRuntime();
+            } else {
+                $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').removeClass("hidden");
+                this.appendLog("Not connected.\n");
+            }
         },
 
         /**
@@ -769,7 +845,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             </div>
                 
             <div class="console-log">
-                <pre>Hello</pre>
+                <pre></pre>
             </div>
             <div class="console-input">
                 <form class="console-form">
