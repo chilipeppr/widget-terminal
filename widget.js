@@ -502,8 +502,10 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 
                 if (options.spjsVersion >= 1.83) {
                     $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').addClass("hidden");
+                    this.resize();
                 } else {
                     $('#com-chilipeppr-widget-terminal .panel-body .alert-danger').removeClass("hidden");
+                    this.resize();
                 }
                 
             } else {
@@ -524,9 +526,6 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 // that means we're not connected to any server
                 //setTimeout(this.onTimeoutFromVersionRequest.bind(this), 5000);
                 
-                
-                
-                
             }
                     
 
@@ -546,10 +545,14 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             } else if (spjsVersion >= 1.87) {
                 console.log("spjsVersion was >= 1.87. cool");
                 $('#com-chilipeppr-widget-terminal .panel-body .alert-badversion').addClass("hidden");
+                this.resize();
+
             } else {
                 console.log("spjsVersion was NOT >= 1.87. cool");
                 $('#com-chilipeppr-widget-terminal .panel-body .alert-badversion').removeClass("hidden");
                 $('#com-chilipeppr-widget-terminal .yourspjsversion').text(spjsVersion);
+                this.resize();
+
             }
         },
         onTimeoutFromVersionRequest: function() {
@@ -573,12 +576,16 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
         onRequestSpjsStatusCallback: function(payload) {
             if (payload.connected) {
                 $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').addClass("hidden");
+                this.resize();
+
                 this.appendLog("Connected.\n");
                 
                 // now ask for our execRuntime
                 this.sendExecRuntime();
             } else {
                 $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').removeClass("hidden");
+                this.resize();
+
                 this.appendLog("Not connected.\n");
                 this.resetAsRaspi();
             }
