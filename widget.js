@@ -183,12 +183,14 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
         },
         isInRaspiCheckMode: false,
         raspiCapture: "",
+        isRaspberryPi: false,
         checkIfRaspberryPi: function() {
             this.isInRaspiCheckMode = true;
             // we potentially have a raspi candidate. send actual cmd line and parse that
             this.send("cat /etc/os-release");
             this.send('echo "done-with-cat-etc-release"');
             
+
         },
         checkIfRaspberryPiCallback: function(payload) {
             // analyze what's coming back
@@ -201,7 +203,10 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 if (this.raspiCapture.match(/raspbian/i)) {
                     // looks like we're on a raspi
                     this.appendLog("You are running SPJS on a Raspberry Pi.\n");
-                    $('#' + this.id + ' .img-raspi')
+                    this.showAsRaspi();
+                } else {
+                    // It's not raspi
+                    this.resetAsRaspi();
                 }
                 
                 this.raspiCapture = "";
@@ -209,6 +214,14 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 this.raspiCapture += payload.Output;
                 
             }
+        },
+        showAsRaspi: function() {
+            $('#' + this.id + ' .img-raspi').removeClass("hidden");
+            this.isRaspberryPi = true;
+        },
+        resetAsRaspi: function() {
+            $('#' + this.id + ' .img-raspi').addClass("hidden");
+            this.isRaspberryPi = false;
         },
         execruntime: null,
         onExecRuntimeStatus: function(json) {
@@ -496,7 +509,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 
                 // we need to ask spjs to get a version back
                 if (this.isVersionWarningInitted == false) {
-                    chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvVersion", this, this.versionWarningCallback);
+                    chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvVersion", this, this.onVersionWarningCallback);
                 }
                 
                 // wait about 2 seconds just to wait a bit for connecting
@@ -515,7 +528,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                     
 
         },
-        versionWarningCallback: function(spjsVersion) {
+        onVersionWarningCallback: function(spjsVersion) {
             console.log("spjsVersion. got versionWarningCallback. spjsVersion:", spjsVersion);
             
             // immediately cancel the fallback timeout
@@ -564,6 +577,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
             } else {
                 $('#com-chilipeppr-widget-terminal .panel-body .alert-notconnected').removeClass("hidden");
                 this.appendLog("Not connected.\n");
+                this.resetAsRaspi();
             }
         },
 
