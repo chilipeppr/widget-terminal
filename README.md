@@ -98,7 +98,7 @@ To better understand how ChiliPeppr's subscribe() method works see amplify.js's 
           </tr>
       </thead>
       <tbody>
-      <tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/ws/send</td><td>We send at a low-level on the socket the exec and execruntime command as a fundamental for this widget to work.</td></tr><tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/requestVersion</td><td>We need to ask the Serial Port JSON Server widget to send us back the version, we receive it back on the /recvVersion signal.</td></tr>    
+      <tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/ws/send</td><td>We send at a low-level on the socket the exec and execruntime command as a fundamental for this widget to work.</td></tr><tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/requestVersion</td><td>We need to ask the Serial Port JSON Server widget to send us back the version, we receive it back on the /recvVersion signal.</td></tr><tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/requestStatus</td><td>We need to request the status of the websocket to see if the Terminal can be used. We are sent back /recvStatus</td></tr>    
       </tbody>
   </table>
 
@@ -115,7 +115,7 @@ To better understand how ChiliPeppr's publish() method works see amplify.js's do
           </tr>
       </thead>
       <tbody>
-      <tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/recvVersion</td><td>When we ask the Serial Port JSON Server widget to send us back the version from the /requestVersion signal, we receive it back on this signal.</td></tr>    
+      <tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/recvVersion</td><td>When we ask the Serial Port JSON Server widget to send us back the version from the /requestVersion signal, we receive it back on this signal.</td></tr><tr valign="top"><td>/com-chilipeppr-widget-terminal/com-chilipeppr-widget-serialport/recvStatus</td><td>When we ask for status via /requestStatus, we get a signal back with the payload of connected vs disconnected for the websocket.</td></tr>    
       </tbody>
   </table>
 
