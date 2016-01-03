@@ -270,6 +270,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 if (this.raspiCapture.match(/raspbian/i)) {
                     // looks like we're on a raspi
                     this.appendLog("You are running SPJS on a Raspberry Pi.\n");
+                    $('#' + this.id + ' .img-raspi')
                 }
                 
                 this.raspiCapture = "";
@@ -818,7 +819,8 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
 
             <div class="btn-toolbar pull-right" role="toolbar">
                 <div class="btn-group">
-                    <img src="//i2dcui.appspot.com/img/raspberry_pi1.png" height="24">
+                    <img class="hidden img-raspi" src="//i2dcui.appspot.com/img/raspberry_pi1.png" height="20" data-delay="1000" data-animation="true" data-placement="auto" 
+                    data-container="body" data-trigger="hover" data-title="Raspberry Pi" data-content="You are running a Raspberry Pi.">
                 </div>
                 <div class="btn-group">
                     <button type="button" class="btn btn-xs btn-default btn-clear" data-delay="1000" data-animation="true" data-placement="auto" 

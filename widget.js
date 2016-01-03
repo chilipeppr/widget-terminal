@@ -201,6 +201,7 @@ cpdefine("inline:com-chilipeppr-widget-terminal", ["chilipeppr_ready", "jqueryui
                 if (this.raspiCapture.match(/raspbian/i)) {
                     // looks like we're on a raspi
                     this.appendLog("You are running SPJS on a Raspberry Pi.\n");
+                    $('#' + this.id + ' .img-raspi')
                 }
                 
                 this.raspiCapture = "";
